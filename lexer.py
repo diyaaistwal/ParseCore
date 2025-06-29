@@ -1,27 +1,23 @@
-import ply.lex as lex
+import re
 
-tokens = (
-    'NUMBER', 'PLUS', 'MINUS', 'TIMES', 'DIVIDE',
-    'LPAREN', 'RPAREN', 'ID'
-)
+TOKEN_SPECIFICATION = [
+    ('NUMBER',   r'\d+'),
+    ('ID',       r'[a-zA-Z_]\w*'),
+    ('OP',       r'[+\-*/]'),
+    ('LPAREN',   r'\('),
+    ('RPAREN',   r'\)'),
+    ('SKIP',     r'[ \t]+'),
+    ('MISMATCH', r'.'),
+]
 
-t_PLUS    = r'\+'
-t_MINUS   = r'-'
-t_TIMES   = r'\*'
-t_DIVIDE  = r'/'
-t_LPAREN  = r'\('
-t_RPAREN  = r'\)'
-t_ID      = r'[a-zA-Z_]\w+'
-
-def t_NUMBER(t):
-    r'\d+'
-    t.value = int(t.value)
-    return t
-
-t_ignore = ' \t'
-
-def t_error(t):
-    print(f"Illegal character '{t.value[0]}'")
-    t.lexer.skip(1)
-
-lexer = lex.lex()
+def tokenize(code):
+    tokens = []
+    token_regex = '|'.join(f'(?P<{name}>{pattern})' for name, pattern in TOKEN_SPECIFICATION)
+    for mo in re.finditer(token_regex, code):
+        kind = mo.lastgroup
+        value = mo.group()
+        if kind == 'NUMBER' or kind == 'ID' or kind == 'OP' or kind in ('LPAREN', 'RPAREN'):
+            tokens.append((kind, value))
+        elif kind == 'MISMATCH':
+            raise SyntaxError(f'Unexpected token {value}')
+    return tokens
