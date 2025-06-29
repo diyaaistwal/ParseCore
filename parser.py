@@ -1,44 +1,61 @@
-import ply.yacc as yacc
-from lexer import tokens
+class Node:
+    def __init__(self, value, children=None):
+        self.value = value
+        self.children = children if children else []
 
-# Grammar rules
+def parse_expression(tokens):
+    tokens = tokens[::-1]
+    
+    def parse_expr():
+        node = parse_term()
+        while tokens and tokens[-1][1] in ('+', '-'):
+            op = tokens.pop()
+            right = parse_term()
+            node = Node(op[1], [node, right])
+        return node
 
-def p_expression_plus(p):
-    'expression : expression PLUS term'
-    p[0] = ('+', p[1], p[3])
+    def parse_term():
+        node = parse_factor()
+        while tokens and tokens[-1][1] in ('*', '/'):
+            op = tokens.pop()
+            right = parse_factor()
+            node = Node(op[1], [node, right])
+        return node
 
-def p_expression_minus(p):
-    'expression : expression MINUS term'
-    p[0] = ('-', p[1], p[3])
+    def parse_factor():
+        if not tokens:
+            raise SyntaxError("Unexpected end of input")
+        token = tokens.pop()
+        if token[0] == 'NUMBER' or token[0] == 'ID':
+            return Node(token[1])
+        elif token[0] == 'LPAREN':
+            node = parse_expr()
+            if not tokens or tokens.pop()[0] != 'RPAREN':
+                raise SyntaxError("Missing closing parenthesis")
+            return node
+        else:
+            raise SyntaxError(f"Unexpected token: {token}")
 
-def p_expression_term(p):
-    'expression : term'
-    p[0] = p[1]
+    root = parse_expr()
+    if tokens:
+        raise SyntaxError(f"Unexpected token: {tokens[-1]}")
+    return root
 
-def p_term_times(p):
-    'term : term TIMES factor'
-    p[0] = ('*', p[1], p[3])
-
-def p_term_div(p):
-    'term : term DIVIDE factor'
-    p[0] = ('/', p[1], p[3])
-
-def p_term_factor(p):
-    'term : factor'
-    p[0] = p[1]
-
-def p_factor_num(p):
-    'factor : NUMBER'
-    p[0] = p[1]
-
-def p_factor_expr(p):
-    'factor : LPAREN expression RPAREN'
-    p[0] = p[2]
-
-def p_error(p):
-    if p:
-        print(f"Syntax error at '{p.value}'")
+def evaluate(node):
+    if not node.children:
+        try:
+            return int(node.value)
+        except ValueError:
+            raise ValueError(f"Cannot evaluate variable: {node.value}")
+    left = evaluate(node.children[0])
+    right = evaluate(node.children[1])
+    if node.value == '+':
+        return left + right
+    elif node.value == '-':
+        return left - right
+    elif node.value == '*':
+        return left * right
+    elif node.value == '/':
+        return left / right
     else:
-        print("Syntax error at EOF")
-
-parser = yacc.yacc()
+        raise ValueError(f"Unknown operator {node.value}")
