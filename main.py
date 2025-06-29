@@ -1,4 +1,5 @@
-from parser import parser
+from lexer import tokenize
+from parser import parse_expression, evaluate
 
 def main():
     while True:
@@ -6,11 +7,13 @@ def main():
         if not s.strip():
             print("Exiting parser.")
             break
-        result = parser.parse(s)
-        if result:
-            print("Parsed successfully:", result)
-        else:
-            print("Parsing failed.")
+        try:
+            tokens = tokenize(s)
+            root = parse_expression(tokens)
+            print("Parsed successfully!")
+            print("Evaluated result:", evaluate(root))
+        except Exception as e:
+            print("Error:", e)
 
 if __name__ == "__main__":
     main()
